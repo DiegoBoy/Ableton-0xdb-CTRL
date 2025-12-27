@@ -22,11 +22,6 @@ Ready = false -- has init completed?
 self.step = 0 -- boot animation step
 self.rgb = {-1, -1, -1, -1, -1, -1} -- aux var to sync Ableton Live's color track (R_hi, R_lo, G_hi, G_lo, B_hi, B_lo)
 
--- restore original 8-bit color value from high and low bits
-function pack_8b(h, l)
-    return (h << 4) | l
-end
-
 -- remote: on color track change update led colors
 function r_color_track(r, g, b)
     for n = 0, N do
@@ -50,6 +45,7 @@ self.midirx_cb = function(self, evt, hdr)
         else
             local n = cc - BaseCC
             element[n]:encoder_value(val) -- update encoder value
+            BanksVal[CurBank][n + 1] = val -- update bank value
             if not element[n]:animated() then -- update led value only if there's NO ongoing animation
                 led_value(n, 2, val * 2)
             end
@@ -83,6 +79,11 @@ end
 
 
 ---- Timer
+-- restore original 8-bit color value from high and low bits
+function pack_8b(h, l)
+    return (h << 4) | l
+end
+
 -- waits for all hi and lo RGB bits, unpacks them and sends them to a remote call
 self.sync_color = function()
     local c = self.rgb
