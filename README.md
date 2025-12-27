@@ -24,4 +24,4 @@ EN16 features:
   - On shift = low (granular control)
   - On press = high (Elektron-style)
 
-\* Requires [Ableton Color Sender](https://github.com/DiegoBoy/AbletonColorSender) remote script
+\* Requires [Ableton Color Sender](https://github.com/DiegoBoy/AbletonColorSender) remote script.
