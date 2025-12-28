@@ -14,21 +14,14 @@ Vel_lo = 0 -- on-shift velocity (fine, granular control)
 BanksCC = {} -- encoder CCs
 BanksCh = {} -- encoder channels
 BanksVal = {} -- encoder values
-BaseCC = 32 -- first CC of 64, rest of values are sequential (100-105 are used to sync track color)
-GlobalCh = 0 -- all banks are using this channel
 CurBank = 1 -- current bank number
 Shifted = false -- is shift enabled?
 Ready = false -- has init completed?
-self.step = 0 -- boot animation step
-self.rgb = {-1, -1, -1, -1, -1, -1} -- aux var to sync Ableton Live's color track (R_hi, R_lo, G_hi, G_lo, B_hi, B_lo)
 
--- remote: on color track change update led colors
-function r_color_track(r, g, b)
-    for n = 0, N do
-        led_color_max(n, 2, r, g, b)
-        led_color(n, 2, r, g, b, 0)
-    end
-end
+self.encBaseCC = 16 -- first CC of 16 sequential numbers assigned to encoders (14-31 is a block of unassigned CCs)
+self.clrBaseCC = 110 -- first CC of 6 sequential numbers assigned to color (102-119 is a block of unassigned CCs)
+self.rgb = {-1, -1, -1, -1, -1, -1} -- aux var to sync Ableton Live's color track (R_hi, R_lo, G_hi, G_lo, B_hi, B_lo)
+self.step = 0 -- boot animation step
 
 -- start timer event now
 function now(n)
@@ -37,17 +30,20 @@ end
 
 -- listens for MIDI messages to update encoder values and led colors based on active track
 self.midirx_cb = function(self, evt, hdr)
-    local ch, cmd, cc, val = evt[1], evt[2], evt[3], evt[4]
-    if hdr[1] == 13 and ch == 0 and cmd == 176 and val ~= nil then
-        if cc >= 100 and cc <= 105 then -- we assign CCs 100-105 to (R_hi, R_lo, G_hi, G_lo, B_hi, B_lo)
-            self.rgb[cc - 99] = val
-            self.sync_color()
-        else
-            local n = cc - BaseCC
-            element[n]:encoder_value(val) -- update encoder value
-            BanksVal[CurBank][n + 1] = val -- update bank value
-            if not element[n]:animated() then -- update led value only if there's NO ongoing animation
-                led_value(n, 2, val * 2)
+    local ch, cmd, cc, v = evt[1], evt[2], evt[3], evt[4]
+    local n = cc - self.encBaseCC
+    if hdr[1] ~= 13 or ch < 0 or ch > 3 or cmd ~= 176 or v == nil or n < 0 then
+        return
+    end
+    if cc >= self.clrBaseCC and cc <= (self.clrBaseCC + 5) then
+        self.rgb[cc - self.clrBaseCC + 1] = v
+        self.sync_color()
+    elseif n <= N then
+        BanksVal[ch + 1][n + 1] = v
+        if BanksCh[CurBank][n + 1] == ch then -- is this message targeting the active bank?
+            element[n]:encoder_value(v) -- update encoder value
+            if not element[n]:animated() then -- update led value only when there's NO ongoing animation
+                led_value(n, 2, v * 2)
             end
         end
     end
@@ -57,16 +53,14 @@ end
 now(self:element_index())
 
 -- initialize banks
-local curCC = BaseCC
 for i = 1, 4 do
     BanksCC[i] = {}
     BanksCh[i] = {}
     BanksVal[i] = {}
     for j = 1, N + 1 do
-        BanksCC[i][j] = curCC
-        BanksCh[i][j] = GlobalCh
+        BanksCC[i][j] = self.encBaseCC + j - 1
+        BanksCh[i][j] = i - 1
         BanksVal[i][j] = 0
-        curCC = curCC + 1
     end
 end
 
@@ -187,6 +181,14 @@ end
 
 ------ Element 14
 ---- Setup
+-- remote: on color track change update led colors
+function r_color_track(r, g, b)
+    for n = 0, N do
+        led_color_max(n, 2, r, g, b)
+        led_color(n, 2, r, g, b, 0)
+    end
+end
+
 -- stops all leds
 function stop_anim()
     for n = 0, N do
