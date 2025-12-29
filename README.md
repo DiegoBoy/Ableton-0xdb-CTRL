@@ -29,8 +29,8 @@ Control Ableton Live with Intech EN16 + BU16. Map up to 64 paramaters, sync EN16
 
 # Installation
 ## Intech Cloud Profiles
-1. Load [EN16 profile](grid-editor://?config-link=b311Gnb8EWPdcKSy0MNs) using Grid Studio
-2. Load [BU16 profile](grid-editor://?config-link=37npWZoikG9kgPuebzdL) using Grid Studio
+1. Load **EN16** profile using Grid Studio: `grid-editor://?config-link=b311Gnb8EWPdcKSy0MNs`
+2. Load **BU16** profile using Grid Studio: `grid-editor://?config-link=37npWZoikG9kgPuebzdL`
 
 ## Ableton Control Surface
 1. Close Ableton Live
