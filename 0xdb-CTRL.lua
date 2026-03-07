@@ -350,6 +350,14 @@ local dir = self:encoder_state() - 64 -- increment / decrement in value
 ctrl(n, dir)
 
 
+---- Timer
+if self.blink_state > 0 then
+  blink(self, 1, 300, 0, self:encoder_value())
+elseif self.saw_state > 0 then
+  saw(self, 1, 500, 0, self:encoder_value())
+end
+
+
 -------- BU16
 ------ Element 16 (System)
 ---- Setup
