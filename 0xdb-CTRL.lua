@@ -18,8 +18,8 @@ CurBank = 1 -- current bank number
 Shifted = false -- is shift enabled?
 Ready = false -- has init completed?
 
-self.encBaseCC = 16 -- first CC of 16 sequential numbers assigned to encoders (14-31 is a block of unassigned CCs)
-self.clrBaseCC = 110 -- first CC of 6 sequential numbers assigned to color (102-119 is a block of unassigned CCs)
+encBaseCC = 16 -- first CC of 16 sequential numbers assigned to encoders (14-31 is a block of unassigned CCs)
+clrBaseCC = 110 -- first CC of 6 sequential numbers assigned to color (102-119 is a block of unassigned CCs)
 self.rgb = {-1, -1, -1, -1, -1, -1} -- aux var to sync Ableton Live's color track (R_hi, R_lo, G_hi, G_lo, B_hi, B_lo)
 self.step = 0 -- boot animation step
 
@@ -29,14 +29,14 @@ function now(n)
 end
 
 -- listens for MIDI messages to update encoder values and led colors based on active track
-self.midirx_cb = function(self, evt, hdr)
+self.midirx_cb = function(self, hdr, evt)
     local ch, cmd, cc, v = evt[1], evt[2], evt[3], evt[4]
-    local n = cc - self.encBaseCC
+    local n = cc - encBaseCC
     if hdr[1] ~= 13 or ch < 0 or ch > 3 or cmd ~= 176 or v == nil or n < 0 then
         return
     end
-    if cc >= self.clrBaseCC and cc <= (self.clrBaseCC + 5) then
-        self.rgb[cc - self.clrBaseCC + 1] = v
+    if cc >= clrBaseCC and cc <= (clrBaseCC + 5) then
+        self.rgb[cc - clrBaseCC + 1] = v
         self.sync_color()
     elseif n <= N then
         BanksVal[ch + 1][n + 1] = v
@@ -58,7 +58,7 @@ for i = 1, 4 do
     BanksCh[i] = {}
     BanksVal[i] = {}
     for j = 1, N + 1 do
-        BanksCC[i][j] = self.encBaseCC + j - 1
+        BanksCC[i][j] = encBaseCC + j - 1
         BanksCh[i][j] = i - 1
         BanksVal[i][j] = 0
     end
