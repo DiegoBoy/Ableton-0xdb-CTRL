@@ -1,7 +1,7 @@
 -------- EN16
 ------ Element 16 (System)
 ---- Setup
-N = 15 -- number of buttons - 1
+N = self:element_index() - 1 -- number of buttons - 1
 R = 0 -- default RGB
 G = 100 -- default RGB
 B = 200 -- default RGB
@@ -17,9 +17,12 @@ BanksVal = {} -- encoder values
 CurBank = 1 -- current bank number
 Shifted = false -- is shift enabled?
 Ready = false -- has init completed?
+EncMinCC_1 = 16  -- lower bound in first CC block range (16-31)
+EncMaxCC_1 = 31  -- higher bound in first CC block range (16-31)
+EncMinCC_2 = 71  -- lower bound in second CC block range (71-118)
+EncMaxCC_2 = 118  -- higher bound in second CC block range (71-118)
 
-encBaseCC = 16 -- first CC of 16 sequential numbers assigned to encoders (14-31 is a block of unassigned CCs)
-clrBaseCC = 110 -- first CC of 6 sequential numbers assigned to color (102-119 is a block of unassigned CCs)
+clrBaseCC = 33 -- first CC of 6 sequential numbers assigned to color (33-38)
 self.rgb = {-1, -1, -1, -1, -1, -1} -- aux var to sync Ableton Live's color track (R_hi, R_lo, G_hi, G_lo, B_hi, B_lo)
 self.step = 0 -- boot animation step
 
@@ -31,14 +34,17 @@ end
 -- listens for MIDI messages to update encoder values and led colors based on active track
 self.midirx_cb = function(self, hdr, evt)
     local ch, cmd, cc, v = evt[1], evt[2], evt[3], evt[4]
-    local n = cc - encBaseCC
-    if hdr[1] ~= 13 or ch < 0 or ch > 3 or cmd ~= 176 or v == nil or n < 0 then
-        return
-    end
+	local idx = cc - (cc > EncMaxCC_1 and (EncMinCC_2 - EncMaxCC_1 - 1) or 0) - EncMinCC_1 -- maps CCs to a flat index
+	local n = idx % (N + 1) -- maps index to physical encoder number 
+
+	if hdr[1] ~= 13 or ch ~= 0 or cmd ~= 176 or v == nil then -- only listen for incoming CCs on channel 1 (0-based)
+		return
+	end
+
     if cc >= clrBaseCC and cc <= (clrBaseCC + 5) then
         self.rgb[cc - clrBaseCC + 1] = v
         self.sync_color()
-    elseif n <= N then
+    elseif idx >= 0 and idx <= EncMaxCC_2 then
         BanksVal[ch + 1][n + 1] = v
         if BanksCh[CurBank][n + 1] == ch then -- is this message targeting the active bank?
             element[n]:encoder_value(v) -- update encoder value
@@ -51,18 +57,6 @@ end
 
 -- start System timer event
 now(self:element_index())
-
--- initialize banks
-for i = 1, 4 do
-    BanksCC[i] = {}
-    BanksCh[i] = {}
-    BanksVal[i] = {}
-    for j = 1, N + 1 do
-        BanksCC[i][j] = encBaseCC + j - 1
-        BanksCh[i][j] = i - 1
-        BanksVal[i][j] = 0
-    end
-end
 
 -- run Setup events of all encoders before their Button, Encoder or Timer events
 -- this way we can make sure all necessary functions are defined when those events run
@@ -276,6 +270,21 @@ end
 
 ------ Element 12
 ---- Setup
+-- initialize banks
+idx = 0
+for i = 1, 4 do
+	BanksCC[i] = {}
+	BanksCh[i] = {}
+	BanksVal[i] = {}
+
+	for j = 1, N + 1 do
+		BanksCC[i][j] = idx + (idx > (EncMaxCC_1 - EncMinCC_1) and (EncMinCC_2 - EncMaxCC_1 - 1) or 0) + EncMinCC_1 -- map flat index to CCs for each virtual encoder
+		BanksCh[i][j] = 0
+		BanksVal[i][j] = 0
+		idx = idx + 1
+	end
+end
+
 -- save all encoder values to the current bank
 function save_bank()
     for n = 0, N do

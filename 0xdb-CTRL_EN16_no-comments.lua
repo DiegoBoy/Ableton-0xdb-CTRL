@@ -1,6 +1,6 @@
 ------ SYSTEM ------
 -- Setup (element 16 = system)
-N = 15
+N = self:element_index() - 1
 R = 0
 G = 100
 B = 200
@@ -16,8 +16,11 @@ BanksVal = {}
 CurBank = 1
 Shifted = false
 Ready = false
-encBaseCC = 16
-clrBaseCC = 110
+EncMinCC_1 = 16
+EncMaxCC_1 = 31
+EncMinCC_2 = 71
+EncMaxCC_2 = 118
+clrBaseCC = 33
 self.rgb = { -1, -1, -1, -1, -1, -1 }
 self.step = 0
 function now(n)
@@ -25,14 +28,15 @@ function now(n)
 end
 self.midirx_cb = function(self, hdr, evt)
   local ch, cmd, cc, v = evt[1], evt[2], evt[3], evt[4]
-  local n = cc - encBaseCC
-  if hdr[1] ~= 13 or ch < 0 or ch > 3 or cmd ~= 176 or v == nil or n < 0 then
+  local idx = cc - (cc > EncMaxCC_1 and (EncMinCC_2 - EncMaxCC_1 - 1) or 0) - EncMinCC_1
+  local n = idx % (N + 1)
+  if hdr[1] ~= 13 or ch ~= 0 or cmd ~= 176 or v == nil then
     return
   end
   if cc >= clrBaseCC and cc <= (clrBaseCC + 5) then
     self.rgb[cc - clrBaseCC + 1] = v
     self.sync_color()
-  elseif n <= N then
+  elseif idx >= 0 and idx <= EncMaxCC_2 then
     BanksVal[ch + 1][n + 1] = v
     if BanksCh[CurBank][n + 1] == ch then
       element[n]:encoder_value(v)
@@ -43,16 +47,6 @@ self.midirx_cb = function(self, hdr, evt)
   end
 end
 now(self:element_index())
-for i = 1, 4 do
-  BanksCC[i] = {}
-  BanksCh[i] = {}
-  BanksVal[i] = {}
-  for j = 1, N + 1 do
-    BanksCC[i][j] = encBaseCC + j - 1
-    BanksCh[i][j] = i - 1
-    BanksVal[i][j] = 0
-  end
-end
 for n = 0, N do
   element[n]:ini()
 end
@@ -244,6 +238,18 @@ end
 
 ------ ELEMENT 12 ------
 -- Setup (element 12)
+idx = 0
+for i = 1, 4 do
+  BanksCC[i] = {}
+  BanksCh[i] = {}
+  BanksVal[i] = {}
+  for j = 1, N + 1 do
+    BanksCC[i][j] = idx + (idx > (EncMaxCC_1 - EncMinCC_1) and (EncMinCC_2 - EncMaxCC_1 - 1) or 0) + EncMinCC_1
+    BanksCh[i][j] = 0
+    BanksVal[i][j] = 0
+    idx = idx + 1
+  end
+end
 function save_bank()
     for n = 0, N do
         BanksVal[CurBank][n + 1] = element[n]:encoder_value()

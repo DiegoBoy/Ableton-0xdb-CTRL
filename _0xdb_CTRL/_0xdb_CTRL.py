@@ -5,15 +5,19 @@ from _Framework.EncoderElement import EncoderElement
 from _Framework.SubjectSlot import subject_slot
 import Live
 
+CC_CHANNEL = 0
 CC_STATUS_BYTE = 0xB0
-CC_NUMBER_CTRL_BASE = 16
-CC_NUMBER_R_HI = 110
-CC_NUMBER_R_LO = 111
-CC_NUMBER_G_HI = 112
-CC_NUMBER_G_LO = 113
-CC_NUMBER_B_HI = 114
-CC_NUMBER_B_LO = 115
-CC_NUMBER_B_lo = 115
+CC_NUMBER_CTRL_MIN_1 = 16
+CC_NUMBER_CTRL_MAX_1 = 31
+CC_NUMBER_CTRL_MIN_2 = 71
+CC_NUMBER_CTRL_MAX_2 = 118
+CC_NUMBER_R_HI = 33
+CC_NUMBER_R_LO = 34
+CC_NUMBER_G_HI = 35
+CC_NUMBER_G_LO = 36
+CC_NUMBER_B_HI = 37
+CC_NUMBER_B_LO = 38
+CC_NUMBER_B_lo = 39
 SYSEX_START = 0xF0
 SYSEX_END = 0xF7
 SYSEX_MANUFACTURER_ID = 100
@@ -48,14 +52,14 @@ class _0xdb_CTRL(ControlSurface):
 
 
     def _setup_encoders(self):
-        """ Creates 64 virtual encoders: 4 Channels (0-3) x 16 CCs (16-31) """
+        """ Creates 64 virtual encoders: CCs (16-31) and (71-119) """
         self._encoders = []
-        # channel loop (0-3 in Python = Channels 1-4 in MIDI)
-        for channel in range(4):
-            # cc loop (16-31 = General Purpose 1-4 + Undefined)
-            for cc in range(16):
-                encoder = EncoderElement(MIDI_CC_TYPE, channel, cc + CC_NUMBER_CTRL_BASE, Live.MidiMap.MapMode.absolute)
-                self._encoders.append(encoder)
+        for i in range(64):
+            cc = i + CC_NUMBER_CTRL_MIN_1
+            if i > CC_NUMBER_CTRL_MAX_1 - CC_NUMBER_CTRL_MIN_1:
+                cc += CC_NUMBER_CTRL_MIN_2 - CC_NUMBER_CTRL_MAX_1 - 1
+            encoder = EncoderElement(MIDI_CC_TYPE, CC_CHANNEL, cc, Live.MidiMap.MapMode.absolute)
+            self._encoders.append(encoder)
 
 
     @subject_slot('selected_track')
@@ -99,7 +103,7 @@ class _0xdb_CTRL(ControlSurface):
                 if i < len(all_params):
                     self._encoders[i].connect_to(all_params[i])
             
-            self.show_message(device.name + " (Ch 1-4, CC 16-31)")
+            self.show_message(device.name + " (Ch 1, CC 16-31 / 71-118)")
         else:
             self.show_message("No device selected.")
 
